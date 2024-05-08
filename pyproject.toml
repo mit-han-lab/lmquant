@@ -1,0 +1,55 @@
+[tool.poetry]
+name = "lmquant"
+version = "0.0.0"
+description = "This package is used for evaluating large foundation models quantization in deep learning."
+authors = ["Yujun Lin"]
+license = "Apache-2.0"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">= 3.10 < 3.12"
+tqdm = ">= 4.66.0"
+torch = ">= 2.2.0"
+ninja = ">= 1.11.1"
+bitsandbytes = ">= 0.42.0"
+transformers = ">= 4.37.0"
+lm_eval = ">= 0.4.2"
+accelerate = ">= 0.26.0"
+datasets = ">= 2.16.0"
+sentencepiece = ">= 0.1.99"
+omniconfig = ">= 0.1.5"
+protobuf = ">= 5.26.0"
+
+[tool.poetry.group.dev.dependencies]
+flake8 = ">= 7.0"
+flake8-docstrings = ">= 1.7.0"
+isort = ">= 5.13"
+black = ">= 24.4.0"
+matplotlib = ">= 3.8.4"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 120 # override black's default line-length
+exclude = '''
+/(
+    \.git
+  | \.mypy_cache
+  | \.tox
+  | \.tmp
+  | \.venv
+  | venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+# make it compatible with black
+profile = "black"
+multi_line_output = 3
+line_length = 120

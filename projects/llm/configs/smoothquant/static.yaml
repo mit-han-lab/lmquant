@@ -1,0 +1,64 @@
+calib:
+  num_samples: 128
+  seq_length: 512
+  min_seq_length: 0
+  max_seq_length: 0
+quant:
+  wgts:
+    static: true
+    dtype: sint8
+    group_shapes:
+    - - 1
+      - -1
+    group_scale_dtypes:
+    - torch.float16
+  ipts:
+    static: false
+    dtype: sint8
+    share_size: 1
+    share_part: m
+    group_shapes:
+    - - 1
+      - -1
+    group_scale_dtypes:
+    - torch.float16
+  opts:
+    static: true
+    dtype: sint8
+    share_size: 1
+    share_part: m
+    group_shapes:
+    - - -1
+      - -1
+    group_scale_dtypes:
+    - torch.float16
+    enable_calib_range: true
+    calib_range:
+      objective: OutputsError
+      strategy: Manual
+      granularity: Layer
+      degree: 2
+      element_batch_size: -1
+      sample_batch_size: -1
+      element_size: -1
+      sample_size: -1
+      pre_reshape: true
+      outputs_device: cpu
+      allow_kernel_calib: false
+  enable_smooth: true
+  smooth:
+    enable_xw: true
+    xw:
+      objective: OutputsError
+      strategy: Manual
+      granularity: Layer
+      ranges:
+      - - AbsMax
+        - AbsMax
+      alpha: 0.85
+      beta: 0.15
+      skip_proj_qkv: false
+      skip_proj_out: true
+      skip_proj_1st: false
+      skip_proj_2nd: true
+    enable_yx: false

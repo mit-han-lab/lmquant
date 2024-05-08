@@ -1,0 +1,215 @@
+seed: 12345
+save_model: false
+model:
+  name: llama2-7b
+  root: /dataset/models
+  local_root: /dataset/models
+eval:
+  num_gpus: 8
+  batch_size: 8
+  output_root: runs
+  output_dirname: default
+  attach_timestamp: true
+  tasks:
+  - wikitext
+  max_seq_length: -4096
+  evaluator: gptq
+calib:
+  data: pileval
+  dataset_path: mit-han-lab/pile-val-backup
+  local_dataset_path: /dataset/pile
+  num_samples: 128
+  seq_length: 1024
+  min_seq_length: 0
+  max_seq_length: 0
+  cache_root: runs
+quant:
+  post_rotary: true
+  develop_dtype: torch.float32
+  wgts:
+    static: true
+    dtype: null
+    group_shapes:
+    - - 1
+      - -1
+    group_scale_dtypes:
+    - null
+    compute_dtype: null
+    compute_group_level: -1
+    saturate_compute_dtype: false
+    enable_calib_kernel: false
+    calib_kernel:
+      enable_gptq: false
+      gptq:
+        damp_percentage: 0.01
+        block_size: 128
+        num_inv_tries: 250
+        hessian_block_size: 512
+        include_proj_qkv: true
+        include_proj_out: true
+        include_proj_1st: true
+        include_proj_2nd: true
+    enable_calib_range: true
+    calib_range:
+      objective: OutputsError
+      strategy: Manual
+      granularity: Group
+      degree: 2
+      element_batch_size: 64
+      sample_batch_size: -1
+      element_size: 512
+      sample_size: -1
+      pre_reshape: true
+      outputs_device: cpu
+      allow_kernel_calib: false
+      skip_proj_qkv: false
+      skip_proj_out: false
+      skip_proj_1st: false
+      skip_proj_2nd: false
+      skip_router: false
+      ratio: 1.0
+      max_shrink: 0.2
+      max_expand: 1.0
+      num_grids: 80
+    skip_head: true
+    skip_embed: true
+    skip_router: true
+    skip_proj_qkv: false
+    skip_proj_out: false
+    skip_proj_1st: false
+    skip_proj_2nd: false
+  ipts:
+    static: false
+    dtype: null
+    group_shapes:
+    - - 1
+      - -1
+    group_scale_dtypes:
+    - null
+    enable_calib_range: false
+    calib_range:
+      objective: OutputsError
+      strategy: GridSearch
+      granularity: ChannelGroup
+      degree: 2
+      element_batch_size: 64
+      sample_batch_size: -1
+      element_size: 512
+      sample_size: -1
+      pre_reshape: true
+      outputs_device: cpu
+      skip_proj_qkv: false
+      skip_proj_out: false
+      skip_proj_1st: false
+      skip_proj_2nd: false
+      skip_router: false
+      ratio: 1.0
+      max_shrink: 0.2
+      max_expand: 1.0
+      num_grids: 80
+    skip_head: true
+    skip_embed: true
+    skip_router: true
+    skip_proj_qkv: false
+    skip_proj_out: false
+    skip_proj_1st: false
+    skip_proj_2nd: false
+  opts:
+    static: false
+    dtype: null
+    group_shapes:
+    - - 1
+      - -1
+    group_scale_dtypes:
+    - null
+    enable_calib_range: false
+    calib_range:
+      objective: OutputsError
+      strategy: GridSearch
+      granularity: ChannelGroup
+      degree: 2
+      element_batch_size: 64
+      sample_batch_size: -1
+      element_size: 512
+      sample_size: -1
+      pre_reshape: true
+      outputs_device: cpu
+      allow_kernel_calib: false
+      skip_attn_q: false
+      skip_attn_k: false
+      skip_attn_v: false
+      ratio: 1.0
+      max_shrink: 0.2
+      max_expand: 1.0
+      num_grids: 80
+    skip_attn_q: false
+    skip_attn_k: false
+    skip_attn_v: false
+  enable_rotation: false
+  rotation:
+    random: false
+    transform_proj_out: false
+    transform_proj_2nd: false
+  enable_reorder: false
+  reorder:
+    strategy: GridSearch
+    degree: 2
+    element_batch_size: -1
+    sample_batch_size: -1
+    element_size: -1
+    sample_size: -1
+    pre_reshape: true
+    outputs_device: cpu
+    allow_kernel_calib: false
+    channel_metric: InputsAbsMax
+    channel_index: Transpose
+    dynamic: false
+    skip_residual: true
+    skip_proj_out: false
+    skip_proj_2nd: false
+  enable_smooth: false
+  smooth:
+    enable_xw: false
+    xw: 
+      objective: OutputsError
+      strategy: GridSearch
+      granularity: Layer
+      degree: 2
+      element_batch_size: -1
+      sample_batch_size: -1
+      element_size: -1
+      sample_size: -1
+      pre_reshape: true
+      outputs_device: cpu
+      allow_kernel_calib: false
+      ranges:
+      - - AbsMax
+        - AbsMax
+      alpha: -3
+      beta: -3
+      num_grids: 20
+      skip_proj_qkv: false
+      skip_proj_out: false
+      skip_proj_1st: false
+      skip_proj_2nd: false
+    enable_yx: false
+    yx: 
+      objective: OutputsError
+      strategy: GridSearch
+      granularity: Layer
+      degree: 2
+      element_batch_size: -1
+      sample_batch_size: -1
+      element_size: -1
+      sample_size: -1
+      pre_reshape: true
+      outputs_device: cpu
+      ranges:
+      - - AbsMax
+        - AbsMax
+      alpha: -3
+      beta: -3
+      num_grids: 20
+  enable_select_wgts: false
+  enable_select_ipts: false
+  enable_select_opts: false

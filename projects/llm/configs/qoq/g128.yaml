@@ -1,0 +1,103 @@
+calib:
+  num_samples: 128
+  seq_length: 1024
+  min_seq_length: 0
+  max_seq_length: 0
+quant:
+  enable_rotation: true
+  enable_reorder: true
+  reorder:
+    strategy: Manual
+    element_batch_size: -1
+    sample_batch_size: -1
+    element_size: -1
+    sample_size: -1
+    channel_metric: InputsAbsMax
+    channel_index: Sequential
+    skip_proj_out: false
+    skip_proj_2nd: false
+    skip_residual: true
+  enable_smooth: true
+  smooth:
+    enable_xw: true
+    xw:
+      objective: OutputsError
+      strategy: Manual
+      granularity: Layer
+      degree: 2
+      element_batch_size: -1
+      sample_batch_size: -1
+      element_size: -1
+      sample_size: -1
+      ranges:
+      - - AbsMax
+        - AbsMax
+      alpha: 0.3
+      beta: 0.7
+      num_grids: 20
+      skip_proj_qkv: true
+      skip_proj_out: false
+      skip_proj_1st: true
+      skip_proj_2nd: false
+    enable_yx: true
+    yx:
+      objective: OutputsError
+      strategy: Manual
+      granularity: Layer
+      degree: 2
+      element_batch_size: -1
+      sample_batch_size: -1
+      element_size: -1
+      sample_size: -1
+      ranges:
+      - - AbsMax
+        - AbsMax
+      alpha: 0.5
+      beta: 0.0
+      num_grids: 20
+      skip_attn_qk: false
+  wgts:
+    static: true
+    dtype: zint4
+    group_shapes:
+    - - 1
+      - -1
+    - - 1
+      - 128
+    group_scale_dtypes:
+    - torch.float16
+    - sint8
+    compute_dtype: sint8
+    compute_group_level: 0
+    saturate_compute_dtype: false
+    enable_calib_kernel: true
+    calib_kernel:
+      enable_gptq: true
+      gptq:
+        damp_percentage: 0.01
+        block_size: 128
+        num_inv_tries: 250
+        hessian_block_size: 512
+        include_proj_qkv: true
+        include_proj_out: true
+        include_proj_1st: true
+        include_proj_2nd: true
+  ipts:
+    static: false
+    dtype: sint8
+    group_shapes:
+    - - 1
+      - -1
+    group_scale_dtypes:
+    - torch.float16
+    compute_dtype: null
+  opts:
+    static: false
+    dtype: zint4
+    group_shapes:
+    - - 1
+      - 128
+    group_scale_dtypes:
+    - torch.float16
+    compute_dtype: null
+    skip_attn_q: true
