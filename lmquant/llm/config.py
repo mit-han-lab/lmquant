@@ -12,7 +12,6 @@ import torch
 from omniconfig import ConfigParser, configclass
 
 from lmquant.quant.config import (
-    QuantCachePath,
     QuantChannelOrderCalibConfig,
     SearchBasedCalibGranularity,
     SearchBasedCalibObjective,
@@ -23,7 +22,7 @@ from lmquant.utils import num2str
 from .dataset import LlmCalibConfig
 from .eval import LlmEvalConfig
 from .model import LlmModelConfig
-from .quant import LlmQuantConfig
+from .quant import LlmQuantCachePath, LlmQuantConfig
 
 __all__ = ["LlmRunConfig"]
 
@@ -49,8 +48,8 @@ class LlmRunConfig:
     seed: int = 12345
     save_model: bool = False
     output_dirpath: str = field(init=False)
-    cache_dirpath: QuantCachePath = field(init=False, default_factory=QuantCachePath)
-    cache_path: QuantCachePath = field(init=False, default_factory=QuantCachePath)
+    cache_dirpath: LlmQuantCachePath = field(init=False, default_factory=LlmQuantCachePath)
+    cache_path: LlmQuantCachePath = field(init=False, default_factory=LlmQuantCachePath)
 
     def __post_init__(self):  # noqa: C901
         # region set num_gpus and batch_size for auto parallelism of large models

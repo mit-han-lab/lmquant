@@ -3,11 +3,8 @@
 
 import copy
 import os
-import typing as tp
 from dataclasses import dataclass, field
-from enum import StrEnum
 
-import omniconfig
 import torch
 import torch.nn as nn
 from omniconfig import configclass
@@ -15,233 +12,85 @@ from transformers.models.mixtral.modeling_mixtral import MixtralSparseMoeBlock
 
 from lmquant.quant.config import (
     BaseQuantCalibConfig,
-    ModelQuantConfig,
     ModuleQuantizerConfig,
-    QuantCachePath,
-    QuantizerKernelConfig,
+    QuantReorderConfig,
+    QuantRotationConfig,
+    QuantSmoothConfig,
+    SearchBasedCalibGranularity,
     TensorQuantizerConfig,
 )
 
-from ..nn import RotaryEmbedding
+from ...nn import RotaryEmbedding
+from .key import LlmModuleKey
+from .select import LlmAttnQuantConfig, LlmProjQuantConfig, LlmSelectQuantizerConfig
 
-__all__ = ["LlmQuantConfig", "LlmModuleKey"]
-
-
-class LlmModuleKey(StrEnum):
-    """Large Language Model Module keys."""
-
-    PROJ_QKV = "proj_qkv"
-    PROJ_OUT = "proj_out"
-    PROJ_1ST = "proj_1st"
-    PROJ_2ND = "proj_2nd"
-    ROUTER = "router"
-    ATTN_Q = "attn_q"
-    ATTN_K = "attn_k"
-    ATTN_V = "attn_v"
-    ATTN_QK = "attn_qk"
+__all__ = ["LlmQuantConfig", "LlmQuantConfig"]
 
 
-@configclass
 @dataclass
-class LlmSelectQuantizerConfig(TensorQuantizerConfig):
-    """Selective quantizer configuration.
+class LlmQuantCachePath:
+    """LLM quantization cache path."""
 
-    Args:
-        static (bool): Whether to use static quantization. Defaults to ``False``.
-        dtype (QuantDataType): The quantization data type. Defaults to ``None``.
-        group_shapes (list[list[int]] | list[int]): The shapes for per-group quantization.
-            Defaults to ``((-1, -1, -1),)``.
-        group_scale_dtypes (list[torch.dtype | QuantDataType | None] | torch.dtype | QuantDataType | None): The
-            quantization scale data type for per-group quantization. Defaults to ``(None,)``.
-        compute_dtype (QuantDataType | None): The quantization data type for compute. Defaults to ``None``.
-        compute_group_level (int): The group level for compute. Defaults to ``-1``.
-        saturate_compute_dtype (bool): Whether to saturate the compute dtype. Defaults to ``False``.
-        calib_range (DynamicRangeCalibConfig | None): The quantizatizer dynamic range calibration configuration.
-            Defaults to ``None``.
-        update_calib_range (bool): Whether to update the dynamic range calibration configuration. Defaults to ``False``.
-        all_layers (bool): Whether to quantize all layers. Defaults to ``True``.
-        num_first_layers (int): The number of first layers to quantize. Defaults to ``0``.
-        num_last_layers (int): The number of last layers to quantize. Defaults to ``0``.
-        layer_interval (int): The layer interval to quantize. Defaults to ``1``.
-    """
+    rotation: str = ""
+    reorder: str = ""
+    smooth: str = ""
+    wgts: str = ""
+    acts: str = ""
 
-    skips: list[str] = field(init=False, default_factory=list)
-    calib_kernel: QuantizerKernelConfig | None = field(init=False, default=None)
-    update_calib_range: bool = False
-    all_layers: bool = True
-    num_first_layers: int = 0
-    num_last_layers: int = 0
-    layer_interval: int = 0
+    def clone(self) -> "LlmQuantCachePath":
+        """Clone the cache paths.
 
-    def __post_init__(self) -> None:
-        super().__post_init__()
-        if self.all_layers:
-            self.num_first_layers = 0
-            self.num_last_layers = 0
-            self.layer_interval = 0
-        else:
-            assert self.num_first_layers > 0 or self.num_last_layers > 0 or self.layer_interval > 0
-
-    def is_selected(self, layer_idx: int, num_layers: int) -> bool:
-        """Check if the decoder layer is selected."""
-        if self.all_layers or layer_idx < 0 or num_layers < 0:
-            return True
-        if self.num_first_layers > 0 and layer_idx < self.num_first_layers:
-            return True
-        if self.num_last_layers > 0 and layer_idx >= (num_layers - self.num_last_layers):
-            return True
-        if self.layer_interval > 0 and layer_idx % self.layer_interval == 0:
-            return True
-        return False
-
-    def __str__(self) -> str:
-        s = super().__str__()
-        if self.all_layers:
-            return s
-        return (
-            s[:-1] + f", num_first_layers={self.num_first_layers}, num_last_layers={self.num_last_layers}, "
-            f"layer_interval={self.layer_interval})"
+        Returns:
+            ModuleQuantCachePath: The cloned cache paths.
+        """
+        return LlmQuantCachePath(
+            rotation=self.rotation,
+            reorder=self.reorder,
+            smooth=self.smooth,
+            wgts=self.wgts,
+            acts=self.acts,
         )
 
-    def generate_dirnames(
-        self,
-        shape: torch.Size = torch.Size((4096, 4096, 16, 16)),
-        dtype: torch.dtype = torch.float16,
-        prefix: str = "",
-    ) -> list[str]:
-        names = super().generate_dirnames(shape, dtype)[:-1]
-        if self.all_layers:
-            names.append(f"select.all")
-        else:
-            names.append(f"select.[{self.num_first_layers}.{self.num_last_layers}.{self.layer_interval}]")
-        return [f"{prefix}.{name}" for name in names] if prefix else names
+    def add_parent_dirs(self, *parent_dirs: str) -> "LlmQuantCachePath":
+        """Add the parent directories to the cache paths.
+
+        Args:
+            parent_dirs (str): The parent directories.
+        """
+        if self.rotation:
+            self.rotation = os.path.join(*parent_dirs, self.rotation)
+        if self.reorder:
+            self.reorder = os.path.join(*parent_dirs, self.reorder)
+        if self.smooth:
+            self.smooth = os.path.join(*parent_dirs, self.smooth)
+        if self.wgts:
+            self.wgts = os.path.join(*parent_dirs, self.wgts)
+        if self.acts:
+            self.acts = os.path.join(*parent_dirs, self.acts)
+        return self
+
+    def add_chidren(self, *children: str) -> "LlmQuantCachePath":
+        """Add the children to the cache paths.
+
+        Args:
+            children (str): The children.
+        """
+        if self.rotation:
+            self.rotation = os.path.join(self.rotation, *children)
+        if self.reorder:
+            self.reorder = os.path.join(self.reorder, *children)
+        if self.smooth:
+            self.smooth = os.path.join(self.smooth, *children)
+        if self.wgts:
+            self.wgts = os.path.join(self.wgts, *children)
+        if self.acts:
+            self.acts = os.path.join(self.acts, *children)
+        return self
 
 
 @configclass
 @dataclass
-class LlmProjQuantConfig:
-    """Large Language Model Projection Modules quantization configuration.
-
-    Args:
-        proj_qkv (LlmSelectQuantConfig): The quantization configuration for the projection of the qkv.
-        proj_out (LlmSelectQuantConfig): The quantization configuration for the output projection.
-        proj_1st (LlmSelectQuantConfig): The quantization configuration for the first layer of feed-forward network.
-        proj_2nd (LlmSelectQuantConfig): The quantization configuration for the second layer of feed-forward network.
-        router (LlmSelectQuantConfig): The quantization configuration for the router.
-    """
-
-    proj_qkv: LlmSelectQuantizerConfig | None = None
-    proj_out: LlmSelectQuantizerConfig | None = None
-    proj_1st: LlmSelectQuantizerConfig | None = None
-    proj_2nd: LlmSelectQuantizerConfig | None = None
-    router: LlmSelectQuantizerConfig | None = None
-
-    def generate_dirnames(
-        self,
-        shape: torch.Size = torch.Size((4096, 4096, 16, 16)),
-        dtype: torch.dtype = torch.float16,
-        prefix: str = "",
-    ) -> list[str]:
-        proj_qkv = [] if self.proj_qkv is None else self.proj_qkv.generate_dirnames(shape, dtype)
-        proj_out = [] if self.proj_out is None else self.proj_out.generate_dirnames(shape, dtype)
-        proj_1st = [] if self.proj_1st is None else self.proj_1st.generate_dirnames(shape, dtype)
-        proj_2nd = [] if self.proj_2nd is None else self.proj_2nd.generate_dirnames(shape, dtype)
-        router = [] if self.router is None else self.router.generate_dirnames(shape, dtype)
-        num_level = max(len(proj_qkv), len(proj_out), len(proj_1st), len(proj_2nd), len(router))
-        names = []
-        if num_level == 0:
-            return names
-        for level in range(num_level):
-            name = f"-proj_qkv.[{proj_qkv[level]}]" if level < len(proj_qkv) else ""
-            name += f"-proj_out.[{proj_out[level]}]" if level < len(proj_out) else ""
-            name += f"-proj_1st.[{proj_1st[level]}]" if level < len(proj_1st) else ""
-            name += f"-proj_2nd.[{proj_2nd[level]}]" if level < len(proj_2nd) else ""
-            name += f"-router.[{router[level]}]" if level < len(router) else ""
-            names.append(name[1:])
-        if prefix:
-            names = [f"{prefix}.{name}" for name in names]
-        return names
-
-    def generate_calib_range_dirnames(self, prefix: str = "") -> str:
-        proj_qkv = [] if self.proj_qkv is None else self.proj_qkv.generate_calib_range_dirnames()
-        proj_out = [] if self.proj_out is None else self.proj_out.generate_calib_range_dirnames()
-        proj_1st = [] if self.proj_1st is None else self.proj_1st.generate_calib_range_dirnames()
-        proj_2nd = [] if self.proj_2nd is None else self.proj_2nd.generate_calib_range_dirnames()
-        router = [] if self.router is None else self.router.generate_calib_range_dirnames()
-        num_level = max(len(proj_qkv), len(proj_out), len(proj_1st), len(proj_2nd), len(router))
-        names = []
-        if num_level == 0:
-            return names
-        for level in range(num_level):
-            name = f"-proj_qkv.[{proj_qkv[level]}]" if level < len(proj_qkv) else ""
-            name += f"-proj_out.[{proj_out[level]}]" if level < len(proj_out) else ""
-            name += f"-proj_1st.[{proj_1st[level]}]" if level < len(proj_1st) else ""
-            name += f"-proj_2nd.[{proj_2nd[level]}]" if level < len(proj_2nd) else ""
-            name += f"-router.[{router[level]}]" if level < len(router) else ""
-            names.append(name[1:])
-        if prefix:
-            names = [f"{prefix}.{name}" for name in names]
-        return names
-
-
-@configclass
-@dataclass
-class LlmAttnQuantConfig:
-    """Large Language Model Attention Modules quantization configuration.
-
-    Args:
-        attn_q (LlmSelectQuantConfig): The quantization configuration for the query projection.
-        attn_k (LlmSelectQuantConfig): The quantization configuration for the key projection.
-        attn_v (LlmSelectQuantConfig): The quantization configuration for the value projection.
-    """
-
-    attn_q: LlmSelectQuantizerConfig | None = None
-    attn_k: LlmSelectQuantizerConfig | None = None
-    attn_v: LlmSelectQuantizerConfig | None = None
-
-    def generate_dirnames(
-        self,
-        shape: torch.Size = torch.Size((4096, 4096, 16, 16)),
-        dtype: torch.dtype = torch.float16,
-        prefix: str = "",
-    ) -> list[str]:
-        attn_q = [] if self.attn_q is None else self.attn_q.generate_dirnames(shape, dtype)
-        attn_k = [] if self.attn_k is None else self.attn_k.generate_dirnames(shape, dtype)
-        attn_v = [] if self.attn_v is None else self.attn_v.generate_dirnames(shape, dtype)
-        num_level = max(len(attn_q), len(attn_k), len(attn_v))
-        if num_level == 0:
-            return []
-        names = []
-        for level in range(num_level):
-            name = f"-attn_q.[{attn_q[level]}]" if level < len(attn_q) else ""
-            name += f"-attn_k.[{attn_k[level]}]" if level < len(attn_k) else ""
-            name += f"-attn_v.[{attn_v[level]}]" if level < len(attn_v) else ""
-            names.append(name[1:])
-        if prefix:
-            names = [f"{prefix}.{name}" for name in names]
-        return names
-
-    def generate_calib_range_dirnames(self, prefix: str = "") -> str:
-        attn_q = [] if self.attn_q is None else self.attn_q.generate_calib_range_dirnames()
-        attn_k = [] if self.attn_k is None else self.attn_k.generate_calib_range_dirnames()
-        attn_v = [] if self.attn_v is None else self.attn_v.generate_calib_range_dirnames()
-        num_level = max(len(attn_q), len(attn_k), len(attn_v))
-        if num_level == 0:
-            return []
-        names = []
-        for level in range(num_level):
-            name = f"-attn_q.[{attn_q[level]}]" if level < len(attn_q) else ""
-            name += f"-attn_k.[{attn_k[level]}]" if level < len(attn_k) else ""
-            name += f"-attn_v.[{attn_v[level]}]" if level < len(attn_v) else ""
-            names.append(name[1:])
-        if prefix:
-            names = [f"{prefix}.{name}" for name in names]
-        return names
-
-
-@configclass
-@dataclass
-class LlmQuantConfig(ModelQuantConfig):
+class LlmQuantConfig(ModuleQuantizerConfig):
     """Large Language Model Module quantization configuration.
 
     Args:
@@ -252,6 +101,10 @@ class LlmQuantConfig(ModelQuantConfig):
         smooth (SmoothQuantConfig): The smooth quantization configuration. Defaults to ``None``.
         reorder (ChannelReorderConfig): The channel reorder configuration. Defaults to ``None``.
         bias_correction (bool): Whether to correct the bias. Defaults to ``False``.
+        post_rotary (bool): Whether to apply quantization after the rotary embedding. Defaults to ``True``.
+        select_wgts (LlmProjQuantConfig): The extra weight quantization configuration. Defaults to ``None``.
+        select_ipts (LlmProjQuantConfig): The extra input quantization configuration. Defaults to ``None``.
+        select_opts (LlmAttnQuantConfig): The extra output quantization configuration. Defaults to ``None``.
         keywords_i (dict[str, list[str]]): The module name keywords for the input quantization.
             Defaults to ``{}``.
         keywords_w (dict[str, list[str]]): The param name keywords for the weight quantization.
@@ -264,33 +117,147 @@ class LlmQuantConfig(ModelQuantConfig):
             Defaults to ``[]``.
         module_types_o (list[type[nn.Module]] | type[nn.Module]): The module types for the output quantization.
             Defaults to ``[]``.
-        channels_dims (dict[type[nn.Module], tuple[int, int]]): The channel dimensions of the inputs and outputs
-            of the modules. Defaults to ``{}``.
-        post_rotary (bool): Whether to apply quantization after the rotary embedding. Defaults to ``True``.
-        select_wgts (LlmProjQuantConfig): The extra weight quantization configuration. Defaults to ``None``.
-        select_ipts (LlmProjQuantConfig): The extra input quantization configuration. Defaults to ``None``.
-        select_opts (LlmAttnQuantConfig): The extra output quantization configuration. Defaults to ``None``.
     """
 
-    module_types_i: list[type[nn.Module]] = field(init=False, default=(nn.Linear, MixtralSparseMoeBlock))
-    module_types_w: list[type[nn.Module]] = field(init=False, default=(nn.Linear,))
-    module_types_o: list[type[nn.Module]] = field(init=False, default=(nn.Linear, RotaryEmbedding))
-    channels_dims: dict[type[nn.Module], tuple[int, int]] = field(default_factory=dict)
+    rotation: QuantRotationConfig | None = None
+    reorder: QuantReorderConfig | None = None
+    smooth: QuantSmoothConfig | None = None
+    bias_correction: bool = False
     post_rotary: bool = True
     develop_dtype: torch.dtype = field(default_factory=lambda s=None: eval(s) if isinstance(s, str) else s)
     select_wgts: LlmProjQuantConfig | None = None
     select_ipts: LlmProjQuantConfig | None = None
     select_opts: LlmAttnQuantConfig | None = None
+    keywords_i: dict[str, list[str]] = field(init=False, default_factory=dict)
+    keywords_w: dict[str, list[str]] = field(init=False, default_factory=dict)
+    keywords_o: dict[str, list[str]] = field(init=False, default_factory=dict)
+    module_types_i: list[type[nn.Module]] = field(init=False, default=(nn.Linear, MixtralSparseMoeBlock))
+    module_types_w: list[type[nn.Module]] = field(init=False, default=(nn.Linear,))
+    module_types_o: list[type[nn.Module]] = field(init=False, default=(nn.Linear, RotaryEmbedding))
     num_hidden_layers: int = field(init=False, default=-1)
 
-    def __post_init__(self) -> None:
-        super().__post_init__()
-        self.channels_dims.update({nn.Linear: (-1, -1), RotaryEmbedding: (-1, -1), MixtralSparseMoeBlock: (-1, -1)})
-        self.set_keywords(
-            **self._generate_keywords(
-                post_rotary=self.post_rotary, skip_router_ipts=self.ipts is None or not self.ipts.enabled_for("router")
-            )
-        )
+    @property
+    def enabled_smooth(self) -> bool:
+        """Whether to enable smooth quantization."""
+        return self.smooth is not None
+
+    @property
+    def enabled_smooth_xw(self) -> bool:
+        """Whether to enable xw smooth quantization."""
+        return self.enabled_smooth and self.smooth.enabled_smooth_xw
+
+    @property
+    def enabled_smooth_yx(self) -> bool:
+        """Whether to enable yy smooth quantization."""
+        return self.enabled_smooth and self.smooth.enabled_smooth_yx
+
+    @property
+    def enabled_reorder(self) -> bool:
+        """Whether to enable channel reorder."""
+        return self.reorder is not None
+
+    @property
+    def enabled_rotation(self) -> bool:
+        """Whether to enable rotation."""
+        return self.rotation is not None
+
+    @property
+    def enabled_bias_correction(self) -> bool:
+        """Whether to correct the bias."""
+        return self.bias_correction
+
+    @property
+    def needs_orig_wgts(self) -> bool:
+        """Whether to keep the original weights."""
+        if self.enabled_ipts and self.ipts.enabled_calib_range:
+            return True
+        if self.enabled_opts and self.opts.enabled_calib_range:
+            return True
+        return self.enabled_wgts and self.enabled_bias_correction
+
+    @staticmethod
+    def _generate_keywords(post_rotary: bool = True, skip_router_ipts: bool = False) -> dict[str, dict[str, list[str]]]:
+        """Get the keywords settings for the language model quantization configuration.
+
+        Args:
+            llama (bool): Whether to use the llama model.
+
+        Returns:
+            dict[str, dict[str, list[str]]]: The keywords settings.
+        """
+        keywords_i = {
+            "proj_qkv": ["q_proj", "k_proj", "v_proj"],
+            "proj_out": ["out_proj", "o_proj"],
+            "proj_1st": ["fc1", "up_proj", "gate_proj", "w1", "w3"],
+            "proj_2nd": ["fc2", "down_proj", "w2"],
+            "head": ["output", "score", "qa_outputs"],
+            "embed": ["embed", "lm_head", "embed_out"],
+        }
+        keywords_o = {
+            "attn_q": ["q_rotary_emb" if post_rotary else "q_proj"],
+            "attn_k": ["k_rotary_emb" if post_rotary else "k_proj"],
+            "attn_v": ["v_proj"],
+        }
+        keywords_w = copy.deepcopy(keywords_i)
+        keywords_i["router"] = ["block_sparse_moe"]
+        keywords_w["router"] = ["block_sparse_moe.gate"]
+        if not skip_router_ipts:
+            keywords_i["proj_1st"].remove("w1")
+            keywords_i["proj_1st"].remove("w3")
+        return dict(keywords_i=keywords_i, keywords_w=keywords_w, keywords_o=keywords_o)
+
+    def init_keywords(self):
+        """Initialize the keywords settings for the language model quantization configuration.
+
+        Args:
+            llama (bool): Whether to use the llama model.
+
+        Returns:
+            dict[str, dict[str, list[str]]]: The keywords settings.
+        """
+        keywords_i = {
+            "proj_qkv": ["q_proj", "k_proj", "v_proj"],
+            "proj_out": ["out_proj", "o_proj"],
+            "proj_1st": ["fc1", "up_proj", "gate_proj", "w1", "w3"],
+            "proj_2nd": ["fc2", "down_proj", "w2"],
+            "head": ["output", "score", "qa_outputs"],
+            "embed": ["embed", "lm_head", "embed_out"],
+        }
+        keywords_o = {
+            "attn_q": ["q_rotary_emb" if self.post_rotary else "q_proj"],
+            "attn_k": ["k_rotary_emb" if self.post_rotary else "k_proj"],
+            "attn_v": ["v_proj"],
+        }
+        keywords_w = copy.deepcopy(keywords_i)
+        keywords_i["router"] = ["block_sparse_moe"]
+        keywords_w["router"] = ["block_sparse_moe.gate"]
+        if self.ipts is not None and self.ipts.enabled_for("router"):
+            keywords_i["proj_1st"].remove("w1")
+            keywords_i["proj_1st"].remove("w3")
+        self.keywords_i = keywords_i
+        self.keywords_w = keywords_w
+        self.keywords_o = keywords_o
+
+    def __post_init__(self) -> None:  # noqa: C901
+        self.init_keywords()
+        if self.smooth is not None:
+            if not self.smooth.enabled_smooth_xw and not self.smooth.enabled_smooth_yx:
+                self.smooth = None
+        if self.rotation is not None and self.reorder is not None:
+            self.reorder.skips.append("residual")
+            if self.rotation.with_hadamard_transform:
+                self.reorder.skips.extend(self.rotation.transforms)
+                self.reorder.skips = sorted(set(self.reorder.skips))
+        if self.enabled_ipts:
+            if self.ipts.enabled_calib_range and self.ipts.calib_range.granularity == SearchBasedCalibGranularity.Group:
+                self.ipts.calib_range.granularity = SearchBasedCalibGranularity.ChannelGroup
+            if self.ipts.static:
+                assert self.ipts.smallest_group_shape[0] == -1, "static quantization requires batch group size to be -1"
+        if self.enabled_opts:
+            if self.opts.enabled_calib_range and self.opts.calib_range.granularity == SearchBasedCalibGranularity.Group:
+                self.opts.calib_range.granularity = SearchBasedCalibGranularity.ChannelGroup
+            if self.opts.static:
+                assert self.opts.smallest_group_shape[0] == -1, "static quantization requires batch group size to be -1"
         if self.enabled_reorder:
             if not self.reorder.dynamic:
                 if LlmModuleKey.PROJ_QKV in self.reorder.skips:
@@ -332,35 +299,138 @@ class LlmQuantConfig(ModelQuantConfig):
                                     setattr(key_config, field, default_field_config)
         # endregion
 
-    def dump(self, path: str = "") -> dict[str, tp.Any]:
-        """Dump configurations.
+    def needs_quant_weights(self, param_name: str, module: nn.Module = None) -> bool:
+        """Whether to quantize the weight of a module.
 
         Args:
-            path (str): Path to dump the configurations.
+            param_name (str): The name of the parameter.
 
         Returns:
-            dict[str, tp.Any]: Dumped configurations.
+            bool: Whether to quantize the weight of the module.
         """
-        result = omniconfig.dump(self)
-        result.pop("channels_dims", None)
-        result.pop("keywords_i", None)
-        result.pop("keywords_w", None)
-        result.pop("keywords_o", None)
-        result.pop("module_types_i", None)
-        result.pop("module_types_w", None)
-        result.pop("module_types_o", None)
-        if path:
-            if path.endswith(("yaml", "yml")):
-                omniconfig.dump_yaml(result, path)
-            elif path.endswith("toml"):
-                omniconfig.dump_toml(result, path)
-            else:
-                raise ValueError(f"Unsupported file format: {path}")
-        return result
+        if not self.enabled_wgts:
+            return False
+        if module is None or isinstance(module, self.module_types_w):
+            needs_quant = False
+            for key, keywords in self.keywords_w.items():
+                for k in keywords:
+                    if k in param_name:
+                        needs_quant = self.wgts.enabled_for(key)
+                        break
+            return needs_quant
+        return False
 
-    def generate_cache_dirpath(self) -> QuantCachePath:  # noqa: C901
+    def needs_quant_inputs(self, module_name: str, module: nn.Module) -> bool:
+        """Whether to quantize the input of a module.
+
+        Args:
+            module_name (str): The name of the module.
+            module (nn.Module): The module.
+
+        Returns:
+            bool: Whether to quantize the input of the module.
+        """
+        if not self.enabled_ipts:
+            return False
+        if isinstance(module, self.module_types_i):
+            needs_quant = False
+            for key, keywords in self.keywords_i.items():
+                for k in keywords:
+                    if module_name.endswith(k):
+                        needs_quant = self.ipts.enabled_for(key)
+                        break
+            return needs_quant
+        return False
+
+    def needs_quant_outputs(self, module_name: str, module: nn.Module) -> bool:
+        """Whether to quantize the output of a module.
+
+        Args:
+            module_name (str): The name of the module.
+            module (nn.Module): The module.
+
+        Returns:
+            bool: Whether to quantize the output of the module.
+        """
+        if not self.enabled_opts:
+            return False
+        if isinstance(module, self.module_types_o):
+            needs_quant = False
+            for key, keywords in self.keywords_o.items():
+                for k in keywords:
+                    if module_name.endswith(k):
+                        needs_quant = self.opts.enabled_for(key)
+                        break
+            return needs_quant
+        return False
+
+    def generate_calib_name(self) -> str:
+        name = ""
+        if self.enabled_rotation:
+            name += "-rot"
+            if self.rotation.random:
+                name += ".rnd"
+        if self.enabled_reorder:
+            name += "-reorder"
+            if self.reorder.dynamic:
+                name += ".dyn"
+        if self.enabled_smooth:
+            name += f"-smooth"
+            if self.enabled_smooth_xw:
+                name += f".xw"
+            if self.enabled_smooth_yx:
+                name += f".yx"
+        if self.enabled_bias_correction:
+            name += "-bias"
+        calib_name = super().generate_calib_name()
+        if calib_name:
+            name += f"-{calib_name}"
+        return name[1:] if name else name
+
+    def generate_cache_dirpath(self) -> LlmQuantCachePath:  # noqa: C901
         """Generate the cache paths for the module quantization configuration."""
-        paths = super().generate_cache_dirpath()
+        quant_names = self.generate_dirnames()
+        w_kernel_names = self.wgts.generate_calib_kernel_dirnames(prefix="w.kernel")
+        if self.enabled_rotation:
+            quant_names.extend(self.rotation.generate_dirnames(prefix="rotate"))
+        reorder_dirpath = ""
+        if self.enabled_reorder:
+            reorder_names = self.reorder.generate_dirnames(prefix="reorder")
+            if self.reorder.allow_kernel_calib:
+                reorder_names.extend(w_kernel_names)
+                w_kernel_names = []
+            quant_names.extend(reorder_names)
+            reorder_dirpath = os.path.join("reorder", *quant_names)
+        smooth_dirpath = ""
+        if self.enabled_smooth:
+            smooth_names = self.smooth.generate_dirnames(prefix="smooth")
+            if (self.smooth.enabled_smooth_xw and self.smooth.xw.allow_kernel_calib) or (
+                self.smooth.enabled_smooth_yx and self.smooth.yx.allow_kernel_calib
+            ):
+                smooth_names.extend(w_kernel_names)
+                w_kernel_names = []
+            quant_names.extend(smooth_names)
+            smooth_dirpath = os.path.join("smooth", *quant_names)
+        quant_names.extend(w_kernel_names)
+        wgts_dirpath = ""
+        if self.enabled_wgts and self.wgts.enabled_calib_range:
+            quant_names.extend(self.wgts.generate_calib_range_dirnames(prefix="w.range"))
+            wgts_dirpath = os.path.join("wgts", *quant_names)
+        needs_acts_cache, acts_dirpath = False, ""
+        if self.enabled_ipts and self.ipts.enabled_calib_range:
+            quant_names.extend(self.ipts.generate_calib_range_dirnames(prefix="x.range"))
+            needs_acts_cache = True
+        if self.enabled_opts and self.opts.enabled_calib_range:
+            quant_names.extend(self.opts.generate_calib_range_dirnames(prefix="y.range"))
+            needs_acts_cache = True
+        if needs_acts_cache:
+            acts_dirpath = os.path.join("acts", *quant_names)
+        paths = LlmQuantCachePath(
+            reorder=reorder_dirpath,
+            smooth=smooth_dirpath,
+            wgts=wgts_dirpath,
+            acts=acts_dirpath,
+        )
         extra_names, extra_wgts_range_names, extra_acts_range_names = [], [], []
         if self.select_wgts is not None:
             extra_names.extend(self.select_wgts.generate_dirnames("w"))
@@ -485,38 +555,6 @@ class LlmQuantConfig(ModelQuantConfig):
     # endregion
 
     # region Large Language Model Quantization Configuration Arguments
-
-    @staticmethod
-    def _generate_keywords(post_rotary: bool = True, skip_router_ipts: bool = False) -> dict[str, dict[str, list[str]]]:
-        """Get the keywords settings for the language model quantization configuration.
-
-        Args:
-            llama (bool): Whether to use the llama model.
-
-        Returns:
-            dict[str, dict[str, list[str]]]: The keywords settings.
-        """
-        keywords_i = {
-            "proj_qkv": ["q_proj", "k_proj", "v_proj"],
-            "proj_out": ["out_proj", "o_proj"],
-            "proj_1st": ["fc1", "up_proj", "gate_proj", "w1", "w3"],
-            "proj_2nd": ["fc2", "down_proj", "w2"],
-            "head": ["output", "score", "qa_outputs"],
-            "embed": ["embed", "lm_head", "embed_out"],
-        }
-        keywords_o = {
-            "attn_q": ["q_rotary_emb" if post_rotary else "q_proj"],
-            "attn_k": ["k_rotary_emb" if post_rotary else "k_proj"],
-            "attn_v": ["v_proj"],
-        }
-        keywords_w = copy.deepcopy(keywords_i)
-        keywords_i["router"] = ["block_sparse_moe"]
-        keywords_w["router"] = ["block_sparse_moe.gate"]
-        if not skip_router_ipts:
-            keywords_i["proj_1st"].remove("w1")
-            keywords_i["proj_1st"].remove("w3")
-        return dict(keywords_i=keywords_i, keywords_w=keywords_w, keywords_o=keywords_o)
-
     @staticmethod
     def _generate_smooth_skip_flags(prefix: str = "") -> dict[str, bool]:
         prefix = f"{prefix.replace('-', '_')}_" if prefix else ""

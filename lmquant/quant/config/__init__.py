@@ -15,10 +15,9 @@ from ..calib.config import (
 from ..functional.config import QuantConfig, QuantGPTQConfig, QuantKernelConfig, QuantKernelType
 from ..quantizer.config import (
     ActivationQuantizerConfig,
+    ModuleQuantizerConfig,
     QuantizerConfig,
     QuantizerKernelConfig,
     TensorQuantizerConfig,
     WeightQuantizerConfig,
 )
-from .model import ModelQuantConfig, QuantCachePath
-from .module import ModuleQuantConfig, ModuleQuantizerConfig

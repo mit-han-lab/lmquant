@@ -6,7 +6,6 @@ import json
 import logging
 import os
 import pprint
-import typing as tp
 
 import torch
 import torch.utils.hooks
