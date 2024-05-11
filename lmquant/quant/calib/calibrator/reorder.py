@@ -170,10 +170,9 @@ def init_channel_index_from_metric(
         metric (torch.Tensor, optional): The metric of the channels.
         metric_mode (QuantChannelOrderCalibConfig.ChannelMetric): The metric mode.
         index_mode (QuantChannelOrderCalibConfig.ChannelIndex): The index mode.
-        ipts_config (BasicModuleQuantConfig): The input quantization configuration.
-        wgts_config (BasicModuleQuantConfig): The weight quantization configuration.
+        group_size (int): The size of the group.
         num_heads (int, optional): The number of heads. Defaults to ``1``.
-        device (torch.device, optional): The device to use. Defaults to ``None``.
+        num_head_repeats (int, optional): The number of head repeats. Defaults to ``1``.
 
     Returns:
         torch.Tensor: The index of the channels.
