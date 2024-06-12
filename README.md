@@ -34,7 +34,8 @@ cd lmquant
 
 2. Install Package
 ```
-conda env create -f environment.yml
+conda env create -f environment.yml -n lmquant
+conda activate lmquant
 poetry install
 ```
 
