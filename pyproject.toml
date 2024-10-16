@@ -17,7 +17,7 @@ lm_eval = ">= 0.4.2"
 accelerate = ">= 0.26.0"
 datasets = ">= 2.16.0"
 sentencepiece = ">= 0.1.99"
-omniconfig = ">= 0.1.5"
+omniconfig = "== 0.1.5"
 protobuf = ">= 5.26.0"
 
 [tool.poetry.group.dev.dependencies]
