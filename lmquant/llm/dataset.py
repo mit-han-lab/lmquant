@@ -139,17 +139,25 @@ class LlmCalibrationCache(CalibrationCache):
         kwargs: dict[str, tp.Any],
         kwargs_cache: dict[str, tp.Any],
     ) -> None:
+        def _check_equality(_k, _v, _cached):
+            if isinstance(_v, DynamicCache):
+                assert _cached is None, f"kwargs_cache[{_k}] should be None"
+            elif isinstance(_v, torch.Tensor):
+                assert _v.allclose(_cached), f"kwargs_cache[{_k}] should be the same as kwargs[{_k}]"
+            elif isinstance(_v, tuple):
+                assert len(_v) == len(
+                    _cached), f"kwargs_cache[{_k}] is a tuple, and should have the same length as kwargs[{_k}]"
+                for i in range(len(_v)):
+                    _check_equality(_k, _v[i], _cached[i])
+            else:
+                assert _v == _cached, f"kwargs_cache[{_k}] should be the same as {_v}"
+
         if kwargs_cache:
             assert len(kwargs_cache) == len(kwargs), "kwargs_cache should have the same length as kwargs"
             for k, v in kwargs.items():
                 assert k in kwargs_cache, f"kwargs_cache should have the same keys as kwargs, but missing {k}"
                 cached = kwargs_cache[k]
-                if isinstance(v, DynamicCache):
-                    assert cached is None, f"kwargs_cache[{k}] should be None"
-                elif isinstance(v, torch.Tensor):
-                    assert v.allclose(cached), f"kwargs_cache[{k}] should be the same as kwargs[{k}]"
-                else:
-                    assert v == cached, f"kwargs_cache[{k}] should be the same as kwargs[{k}]"
+                _check_equality(k, v, cached)
         else:
             for k, v in kwargs.items():
                 if isinstance(v, DynamicCache):
