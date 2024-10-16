@@ -75,7 +75,7 @@ def run(  # noqa: C901
     # region rotate model
     if needs_rotation:
         logger.info(f"* Building model {config.model.name} from {config.model.path}")
-        model, tokenizer = config.model.build(dtype=torch.float32, cpu=config.model.size > 30)
+        model, tokenizer = config.model.build(dtype=torch.float32)
         model = LlmModelStruct.build(model)
         config.quant.num_hidden_layers = model.config.num_hidden_layers
         if config.quant.develop_dtype is None:
