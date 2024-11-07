@@ -98,6 +98,7 @@ def gptq_quantize(  # noqa: C901
     # endregion
     # region step 5: get the inverse of the Hessian matrix
     stable_inv, num_inv_tries = False, 0
+    hessian_inv = None
     while (not stable_inv) and num_inv_tries < gptq_config.num_inv_tries:
         num_inv_tries += 1
         try:
@@ -105,7 +106,7 @@ def gptq_quantize(  # noqa: C901
             hessian_inv = torch.cholesky_inverse(hessian_inv)
             hessian_inv = torch.linalg.cholesky(hessian_inv, upper=True)
         except RuntimeError:
-            hessian_diag += (gptq_config.damp_percentage * 0.1) * hessian_diag_mean
+            hessian_diag += gptq_config.damp_percentage * hessian_diag_mean
             continue
         stable_inv = True
     if num_inv_tries > 1:
@@ -113,6 +114,7 @@ def gptq_quantize(  # noqa: C901
         logger.debug(
             "        - GPTQ Hessian is not stable %s %d tries.", "until" if stable_inv else "after", num_inv_tries
         )
+    assert stable_inv and hessian_inv is not None, "GPTQ Hessian is not stable! Consider increase damp_percentage."
     assert not hessian_inv.isinf().any(), "Inverse of Hessian matrix contains Inf."
     assert not hessian_inv.isnan().any(), "Inverse of Hessian matrix contains NaN."
     del hessian, hessian_diag, hessian_diag_mean, num_inv_tries
