@@ -1,0 +1,41 @@
+quant:
+  enable_smooth: true
+  smooth:
+    enable_proj: true
+    proj:
+      objective: OutputsError
+      strategy: GridSearch
+      granularity: Layer
+      spans:
+      - - AbsMax
+        - AbsMax
+      alpha: 0.5
+      beta: -2
+      num_grids: 20
+      allow_low_rank: true
+      skips:
+      - embed
+      - resblock
+      - transformer_proj_in
+      - transformer_proj_out
+      - transformer_norm
+      - transformer_add_norm
+      - down_sample
+      - up_sample
+  wgts:
+    enable_low_rank: true
+    low_rank:
+      rank: 32
+      early_stop: true
+      degree: 2
+      objective: OutputsError
+      num_iters: 100
+      skips:
+      - embed
+      - resblock
+      - transformer_proj_in
+      - transformer_proj_out
+      - transformer_norm
+      - transformer_add_norm
+      - down_sample
+      - up_sample

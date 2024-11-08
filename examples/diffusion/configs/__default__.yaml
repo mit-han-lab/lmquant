@@ -1,0 +1,120 @@
+seed: 12345
+enable_cache: true
+cache:
+  root: runs
+output:
+  root: runs
+  dirname: default
+pipeline:
+  dtype: torch.float16
+  device: cuda
+  shift_activations: false
+eval:
+  num_samples: 1024
+  num_frames: null
+  fps: null
+  height: null
+  width: null
+  guidance_scale: null
+  num_steps: null
+  gt_metrics: ["clip_iqa", "clip_score", "image_reward", "fid"]
+  ref_metrics: ["psnr", "lpips", "ssim", "fid"]
+  gen_root: "{output}/{job}"
+  ref_root: baselines/{dtype}/{model}/{protocol}
+  gt_stats_root: benchmarks/stats
+  num_gpus: 8
+  batch_size_per_gpu: 1
+  chunk_start: 0
+  chunk_step: 1
+  benchmarks:
+    - "MJHQ"
+    - "DCI"
+quant:
+  calib:
+    data: qdiff
+    path: datasets/{dtype}/{model}/{protocol}/{data}/s128
+    num_samples: 128
+    num_workers: 8
+  wgts:
+    dtype: null
+    zero_point: null
+    group_shapes:
+    - - 1
+      - -1
+    scale_dtypes:
+    - null
+    skips: []
+    enable_calib_range: true
+    calib_range:
+      degree: 2
+      objective: OutputsError
+      strategy: Manual
+      granularity: Layer
+      element_batch_size: 64
+      sample_batch_size: 64
+      element_size: 512
+      sample_size: -1
+      ratio: 1.0
+      max_shrink: 0.2
+      max_expand: 1.0
+      num_grids: 80
+      skips: []
+    low_rank:
+      rank: 32
+      exclusive: false
+      compensate: false
+      early_stop: false
+      degree: 2
+      objective: OutputsError
+      sample_batch_size: 64
+      sample_size: -1
+      num_iters: 1
+      skips: []
+  ipts:
+    static: false
+    dtype: null
+    zero_point: null
+    group_shapes:
+    - - 1
+      - -1
+    scale_dtypes:
+    - null
+    allow_unsigned: false
+    skips: []
+    enable_calib_range: false
+    calib_range:
+      degree: 2
+      objective: OutputsError
+      strategy: Manual
+      granularity: Layer
+      element_batch_size: 64
+      sample_batch_size: 64
+      element_size: 512
+      sample_size: -1
+      ratio: 1.0
+      max_shrink: 0.2
+      max_expand: 1.0
+      num_grids: 80
+      skips: []
+  enable_smooth: false
+  smooth:
+    enable_proj: false
+    proj:
+      degree: 2
+      objective: OutputsError
+      strategy: Manual
+      granularity: Layer
+      element_batch_size: -1
+      sample_batch_size: 64
+      element_size: -1
+      sample_size: -1
+      pre_reshape: true
+      outputs_device: cpu
+      spans:
+      - - AbsMax
+        - AbsMax
+      alpha: 0.5
+      beta: -1
+      num_grids: 20
+      skips: []
+  develop_dtype: torch.float32

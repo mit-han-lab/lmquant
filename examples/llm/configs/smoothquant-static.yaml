@@ -1,0 +1,57 @@
+quant:
+  calib:
+    num_samples: 128
+    seq_length: 512
+    min_seq_length: 0
+    max_seq_length: 0
+  wgts:
+    dtype: sint8
+    group_shapes:
+    - - 1
+      - -1
+    scale_dtypes:
+    - null
+  ipts:
+    static: false
+    dtype: sint8
+    group_shapes:
+    - - 1
+      - -1
+    scale_dtypes:
+    - null
+  opts:
+    static: true
+    dtype: sint8
+    group_shapes:
+    - - -1
+      - -1
+    scale_dtypes:
+    - null
+    enable_calib_range: true
+    calib_range:
+      objective: OutputsError
+      strategy: Manual
+      granularity: Layer
+      degree: 2
+      element_batch_size: -1
+      sample_batch_size: -1
+      element_size: -1
+      sample_size: -1
+      pre_reshape: true
+      outputs_device: cpu
+  enable_smooth: true
+  smooth:
+    enable_proj: true
+    proj:
+      objective: OutputsError
+      strategy: Manual
+      granularity: Layer
+      spans:
+      - - AbsMax
+        - AbsMax
+      alpha: 0.85
+      beta: 0.15
+      skips:
+      - out_proj
+      - down_proj
+    enable_attn: false

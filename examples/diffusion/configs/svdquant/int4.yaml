@@ -1,0 +1,49 @@
+quant:
+  wgts:
+    dtype: sint4
+    group_shapes:
+    - - 1
+      - 64
+      - 1
+      - 1
+      - 1
+    scale_dtypes:
+    - null
+    enable_calib_range: false
+    calib_range:
+      degree: 2
+      objective: OutputsError
+      strategy: GridSearch
+      granularity: Group
+      ratio: 1.0
+      max_shrink: 0.2
+      max_expand: 1.0
+      num_grids: 80
+      skips:
+        - embed
+        - resblock_shortcut
+        - resblock_time_proj
+        - transformer_proj_in
+        - transformer_proj_out
+        - transformer_norm
+        - transformer_add_norm
+        - attn
+        - attn_add
+        - ffn
+        - ffn_add
+        - down_sample
+        - up_sample
+  ipts:
+    static: false
+    dtype: sint4
+    group_shapes:
+    - - 1
+      - 64
+      - 1
+      - 1
+      - 1
+    scale_dtypes:
+    - null
+    allow_unsigned: true
+pipeline:
+  shift_activations: true

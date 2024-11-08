@@ -1,0 +1,58 @@
+pipeline:
+  name: flux.1-dev
+  dtype: torch.bfloat16
+eval:
+  num_steps: 50
+  guidance_scale: 3.5
+  protocol: fmeuler{num_steps}-g{guidance_scale}
+quant:
+  calib:
+    batch_size: 16
+  wgts:
+    calib_range:
+      element_batch_size: 64
+      sample_batch_size: 16
+      element_size: 512
+      sample_size: -1
+    low_rank:
+      sample_batch_size: 16
+      sample_size: -1
+    skips: 
+    - embed
+    - resblock_shortcut
+    - resblock_time_proj
+    - transformer_proj_in
+    - transformer_proj_out
+    - down_sample
+    - up_sample
+  ipts:
+    calib_range:
+      element_batch_size: 64
+      sample_batch_size: 16
+      element_size: 512
+      sample_size: -1
+    skips: 
+    - embed
+    - resblock_shortcut
+    - resblock_time_proj
+    - transformer_proj_in
+    - transformer_proj_out
+    - transformer_norm
+    - transformer_add_norm
+    - down_sample
+    - up_sample
+  opts:
+    calib_range:
+      element_batch_size: 64
+      sample_batch_size: 16
+      element_size: 512
+      sample_size: -1
+  smooth:
+    proj:
+      element_batch_size: -1
+      sample_batch_size: 16
+      element_size: -1
+      sample_size: -1
+    attn:
+      sample_batch_size: 16
+      sample_size: -1

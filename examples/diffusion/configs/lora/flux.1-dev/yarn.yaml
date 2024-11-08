@@ -1,0 +1,14 @@
+# https://huggingface.co/linoyts/yarn_art_Flux_LoRA
+# linoyts/yarn_art_Flux_LoRA
+# separate, rank=4, both joint and single blocks
+eval:
+  benchmarks:
+    - prompts/lora/yarn.yaml
+  num_steps: 28
+pipeline:
+  lora:
+    alpha: 1
+    path: linoyts/yarn_art_Flux_LoRA
+    weight_name: pytorch_lora_weights.safetensors
+output:
+  job: yarn-1.0

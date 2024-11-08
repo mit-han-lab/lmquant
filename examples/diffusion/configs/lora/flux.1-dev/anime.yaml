@@ -1,0 +1,14 @@
+# https://huggingface.co/alvdansen/sonny-anime-fixed
+# alvdansen/sonny-anime-fixed
+# separate, rank=16
+eval:
+  benchmarks:
+    - prompts/lora/anime.yaml
+  num_steps: 28
+pipeline:
+  lora:
+    alpha: 1
+    path: alvdansen/sonny-anime-fixed
+    weight_name: araminta_k_sonnyanime_fluxd_fixed.safetensors
+output:
+  job: anime-1.0

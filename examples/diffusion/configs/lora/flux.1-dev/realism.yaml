@@ -1,0 +1,14 @@
+# https://huggingface.co/XLabs-AI/flux-RealismLora
+# XLabs-AI/flux-RealismLora
+# qkv fused, rank=16, only joint blocks
+eval:
+  benchmarks:
+    - prompts/lora/realism.yaml
+  num_steps: 25
+pipeline:
+  lora:
+    alpha: 0.9
+    path: mit-han-lab/FLUX.1-dev-LoRA-Collections
+    weight_name: realism.safetensors
+output:
+  job: realism-0.9

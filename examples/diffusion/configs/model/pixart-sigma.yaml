@@ -1,0 +1,49 @@
+pipeline:
+  name: pixart-sigma
+eval:
+  num_steps: 20
+  guidance_scale: 4.5
+  protocol: dpm{num_steps}-g{guidance_scale}
+quant:
+  calib:
+    batch_size: 256
+  wgts:
+    calib_range:
+      sample_batch_size: -1
+    low_rank:
+      sample_batch_size: -1
+    skips: 
+    - embed
+    - resblock_shortcut
+    - resblock_time_proj
+    - transformer_proj_in
+    - transformer_proj_out
+    - transformer_norm
+    - transformer_add_norm
+    - attn_add
+    - ffn_add
+    - down_sample
+    - up_sample
+  ipts:
+    calib_range:
+      sample_batch_size: -1
+    skips: 
+    - embed
+    - resblock_shortcut
+    - resblock_time_proj
+    - transformer_proj_in
+    - transformer_proj_out
+    - transformer_norm
+    - transformer_add_norm
+    - attn_add
+    - ffn_add
+    - down_sample
+    - up_sample
+  opts:
+    calib_range:
+      sample_batch_size: -1
+  smooth:
+    proj:
+      sample_batch_size: -1
+    attn:
+      sample_batch_size: -1

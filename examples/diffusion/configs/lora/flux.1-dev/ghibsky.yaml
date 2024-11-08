@@ -1,0 +1,14 @@
+# https://huggingface.co/aleksa-codes/flux-ghibsky-illustration
+# aleksa-codes/flux-ghibsky-illustration
+# separate, rank=16
+eval:
+  benchmarks:
+    - prompts/lora/ghibsky.yaml
+  num_steps: 28
+pipeline:
+  lora:
+    alpha: 1
+    path: aleksa-codes/flux-ghibsky-illustration
+    weight_name: lora.safetensors
+output:
+  job: ghibsky-1.0

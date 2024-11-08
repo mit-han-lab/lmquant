@@ -1,0 +1,15 @@
+# https://huggingface.co/Shakker-Labs/FLUX.1-dev-LoRA-Children-Simple-Sketch/tree/main
+# Shakker-Labs/FLUX.1-dev-LoRA-Children-Simple-Sketch
+# pretrained/converted/drawing.safetensors
+# fused, rank=64
+eval:
+  benchmarks:
+    - prompts/lora/sketch.yaml
+  num_steps: 24
+pipeline:
+  lora:
+    alpha: 1
+    path: mit-han-lab/FLUX.1-dev-LoRA-Collections
+    weight_name: sketch.safetensors
+output:
+  job: sketch-1.0

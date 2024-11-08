@@ -1,0 +1,170 @@
+seed: 12345
+save_model: false
+cache:
+  root: runs
+output:
+  root: runs
+  dirname: default
+model:
+  name: llama-2-7b
+  path: null
+  root: ''
+  local_path: null
+  local_root: ~/models
+  dtype: torch.float16
+eval:
+  num_gpus: 8
+  batch_size: 8
+  tasks:
+  - wikitext
+  max_seq_length: -4096
+  evaluators:
+  - gptq
+quant:
+  calib:
+    data: pileval
+    path: mit-han-lab/pile-val-backup
+    num_samples: 128
+    seq_length: 1024
+    min_seq_length: 0
+    max_seq_length: 0
+  develop_dtype: torch.float32
+  wgts:
+    dtype: null
+    zero_point: null
+    group_shapes:
+    - - 1
+      - -1
+    scale_dtypes:
+    - null
+    intermediate_dtypes: []
+    intermediate_levels: []
+    needs_dequant_saturation: false
+    enable_kernel_gptq: false
+    kernel_gptq:
+      damp_percentage: 0.01
+      block_size: 128
+      num_inv_tries: 250
+      hessian_block_size: 512
+    enable_calib_range: true
+    calib_range:
+      objective: OutputsError
+      strategy: Manual
+      granularity: Group
+      degree: 2
+      element_batch_size: 64
+      sample_batch_size: -1
+      element_size: 512
+      sample_size: -1
+      pre_reshape: true
+      outputs_device: cpu
+      ratio: 1.0
+      max_shrink: 0.2
+      max_expand: 1.0
+      num_grids: 80
+      skips: []
+    skips: []
+  ipts:
+    static: false
+    dtype: null
+    zero_point: null
+    group_shapes:
+    - - 1
+      - -1
+    scale_dtypes:
+    - null
+    enable_calib_range: false
+    calib_range:
+      objective: OutputsError
+      strategy: GridSearch
+      granularity: ChannelGroup
+      degree: 2
+      element_batch_size: 64
+      sample_batch_size: -1
+      element_size: 512
+      sample_size: -1
+      pre_reshape: true
+      outputs_device: cpu
+      ratio: 1.0
+      max_shrink: 0.2
+      max_expand: 1.0
+      num_grids: 80
+      skips: []
+    skips: []
+  opts:
+    static: false
+    dtype: null
+    zero_point: null
+    group_shapes:
+    - - 1
+      - -1
+    scale_dtypes:
+    - null
+    enable_calib_range: false
+    calib_range:
+      objective: OutputsError
+      strategy: GridSearch
+      granularity: ChannelGroup
+      degree: 2
+      element_batch_size: 64
+      sample_batch_size: -1
+      element_size: 512
+      sample_size: -1
+      pre_reshape: true
+      outputs_device: cpu
+      ratio: 1.0
+      max_shrink: 0.2
+      max_expand: 1.0
+      num_grids: 80
+      skips: []
+    skips: []
+  enable_rotation: false
+  rotation:
+    random: false
+    transforms: []
+  enable_reorder: false
+  reorder:
+    strategy: Manual
+    degree: 2
+    sample_batch_size: -1
+    sample_size: -1
+    outputs_device: cpu
+    channel_metric: InputsAbsMax
+    channel_index: Sequential
+    dynamic: false
+    skips:
+    - residual
+  enable_smooth: false
+  smooth:
+    enable_proj: false
+    proj: 
+      objective: OutputsError
+      strategy: GridSearch
+      granularity: Layer
+      degree: 2
+      element_batch_size: -1
+      sample_batch_size: -1
+      element_size: -1
+      sample_size: -1
+      pre_reshape: true
+      outputs_device: cpu
+      spans:
+      - - AbsMax
+        - AbsMax
+      alpha: -3
+      beta: -3
+      num_grids: 20
+      skips: []
+    enable_attn: false
+    attn: 
+      strategy: Manual
+      degree: 2
+      sample_batch_size: -1
+      sample_size: -1
+      outputs_device: cpu
+      spans:
+      - - AbsMax
+        - AbsMax
+      alpha: 0.5
+      beta: 0
+      num_grids: 20

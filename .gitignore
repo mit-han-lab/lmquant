@@ -163,7 +163,13 @@ cython_debug/
 .vscode/
 !.vscode/settings.json
 
+.DS_Store
 *.log
 *.pt
 .tmp/
+runs
+exps
 runs/
+exps/
+wandb
+wandb/

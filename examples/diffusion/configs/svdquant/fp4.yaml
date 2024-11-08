@@ -1,0 +1,22 @@
+quant:
+  wgts:
+    dtype: sfp4_e2m1_all
+    group_shapes:
+    - - 1
+      - 32
+      - 1
+      - 1
+      - 1
+    scale_dtypes:
+    - sfp8_e4m3_nan
+  ipts:
+    static: false
+    dtype: sfp4_e2m1_all
+    group_shapes:
+    - - 1
+      - 32
+      - 1
+      - 1
+      - 1
+    scale_dtypes:
+    - sfp8_e4m3_nan

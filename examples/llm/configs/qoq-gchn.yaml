@@ -1,0 +1,75 @@
+quant:
+  calib:
+    num_samples: 128
+    seq_length: 1024
+    min_seq_length: 0
+    max_seq_length: 0
+  wgts:
+    dtype: uint4
+    zero_point: PostScale
+    group_shapes:
+    - - 1
+      - -1
+    scale_dtypes:
+    - torch.float16
+    enable_kernel_gptq: true
+    kernel_gptq:
+      damp_percentage: 0.01
+      block_size: 128
+      num_inv_tries: 250
+      hessian_block_size: 512
+    enable_calib_range: true
+    calib_range:
+      objective: OutputsError
+      strategy: GridSearch
+      granularity: Group
+      max_shrink: 0.2
+      max_expand: 1.0
+      num_grids: 80
+  ipts:
+    static: false
+    dtype: sint8
+    group_shapes:
+    - - 1
+      - -1
+    scale_dtypes:
+    - torch.float16
+  opts:
+    static: false
+    dtype: uint4
+    zero_point: PostScale
+    group_shapes:
+    - - 1
+      - 128
+    scale_dtypes:
+    - torch.float16
+    skips:
+    - attn_q
+  enable_rotation: true
+  enable_smooth: true
+  smooth:
+    enable_proj: true
+    proj:
+      objective: OutputsError
+      strategy: Manual
+      granularity: Layer
+      degree: 2
+      spans:
+      - - AbsMax
+        - AbsMax
+      alpha: 0.1
+      beta: 0.9
+      num_grids: 20
+      skips:
+      - qkv_proj
+      - up_proj
+    enable_attn: true
+    attn:
+      strategy: GridSearch
+      degree: 2
+      spans:
+      - - AbsMax
+        - AbsMax
+      alpha: 0.5
+      beta: -2
+      num_grids: 20

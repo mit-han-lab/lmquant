@@ -1,0 +1,35 @@
+pipeline:
+  name: sdxl-turbo
+eval:
+  num_steps: 4
+  guidance_scale: 0
+  protocol: eulera{num_steps}-g{guidance_scale}
+quant:
+  calib:
+    batch_size: 256
+  wgts:
+    skips: 
+    - embed
+    - resblock_shortcut
+    - resblock_time_proj
+    - transformer_proj_in
+    - transformer_proj_out
+    - transformer_norm
+    - transformer_add_norm
+    - attn_add
+    - ffn_add
+    - down_sample
+    - up_sample
+  ipts:
+    skips: 
+    - embed
+    - resblock_shortcut
+    - resblock_time_proj
+    - transformer_proj_in
+    - transformer_proj_out
+    - transformer_norm
+    - transformer_add_norm
+    - attn_add
+    - ffn_add
+    - down_sample
+    - up_sample

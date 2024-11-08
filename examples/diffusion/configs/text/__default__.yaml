@@ -1,0 +1,179 @@
+# copied from projects/llm/configs/__default__.yaml
+enable_text: true
+text:
+  calib:
+    data: pileval
+    path: mit-han-lab/pile-val-backup
+    num_samples: 128
+    seq_length: 1024
+    min_seq_length: 0
+    max_seq_length: 0
+  develop_dtype: torch.float32
+  wgts:
+    dtype: null
+    zero_point: null
+    group_shapes:
+    - - 1
+      - -1
+    scale_dtypes:
+    - null
+    intermediate_dtypes: []
+    intermediate_levels: []
+    needs_dequant_saturation: false
+    enable_kernel_gptq: false
+    kernel_gptq:
+      damp_percentage: 0.01
+      block_size: 128
+      num_inv_tries: 250
+      hessian_block_size: 512
+    enable_calib_range: true
+    calib_range:
+      objective: OutputsError
+      strategy: Manual
+      granularity: Group
+      degree: 2
+      element_batch_size: 64
+      sample_batch_size: -1
+      element_size: 512
+      sample_size: -1
+      pre_reshape: true
+      outputs_device: cpu
+      ratio: 1.0
+      max_shrink: 0.2
+      max_expand: 1.0
+      num_grids: 80
+      skip_qkv_proj: false
+      skip_out_proj: false
+      skip_up_proj: false
+      skip_down_proj: false
+    skip_qkv_proj: false
+    skip_out_proj: false
+    skip_up_proj: false
+    skip_down_proj: false
+  ipts:
+    static: false
+    dtype: null
+    zero_point: null
+    group_shapes:
+    - - 1
+      - -1
+    scale_dtypes:
+    - null
+    enable_calib_range: false
+    calib_range:
+      objective: OutputsError
+      strategy: GridSearch
+      granularity: ChannelGroup
+      degree: 2
+      element_batch_size: 64
+      sample_batch_size: -1
+      element_size: 512
+      sample_size: -1
+      pre_reshape: true
+      outputs_device: cpu
+      ratio: 1.0
+      max_shrink: 0.2
+      max_expand: 1.0
+      num_grids: 80
+      skip_qkv_proj: false
+      skip_out_proj: false
+      skip_up_proj: false
+      skip_down_proj: false
+    skip_qkv_proj: false
+    skip_out_proj: false
+    skip_up_proj: false
+    skip_down_proj: false
+  opts:
+    static: false
+    dtype: null
+    zero_point: null
+    group_shapes:
+    - - 1
+      - -1
+    scale_dtypes:
+    - null
+    enable_calib_range: false
+    calib_range:
+      objective: OutputsError
+      strategy: GridSearch
+      granularity: ChannelGroup
+      degree: 2
+      element_batch_size: 64
+      sample_batch_size: -1
+      element_size: 512
+      sample_size: -1
+      pre_reshape: true
+      outputs_device: cpu
+      ratio: 1.0
+      max_shrink: 0.2
+      max_expand: 1.0
+      num_grids: 80
+      skip_attn_q: false
+      skip_attn_k: false
+      skip_attn_v: false
+    skip_attn_q: false
+    skip_attn_k: false
+    skip_attn_v: false
+  enable_rotation: false
+  rotation:
+    random: false
+    transform_out_proj: false
+    transform_down_proj: false
+  enable_reorder: false
+  reorder:
+    strategy: Manual
+    degree: 2
+    element_batch_size: -1
+    sample_batch_size: -1
+    element_size: -1
+    sample_size: -1
+    pre_reshape: true
+    outputs_device: cpu
+    channel_metric: InputsAbsMax
+    channel_index: Sequential
+    dynamic: false
+    skip_residual: true
+    skip_out_proj: false
+    skip_down_proj: false
+  enable_smooth: false
+  smooth:
+    enable_proj: false
+    proj: 
+      objective: OutputsError
+      strategy: GridSearch
+      granularity: Layer
+      degree: 2
+      element_batch_size: -1
+      sample_batch_size: -1
+      element_size: -1
+      sample_size: -1
+      pre_reshape: true
+      outputs_device: cpu
+      spans:
+      - - AbsMax
+        - AbsMax
+      alpha: -3
+      beta: -3
+      num_grids: 20
+      skip_qkv_proj: false
+      skip_out_proj: false
+      skip_up_proj: false
+      skip_down_proj: false
+    enable_attn: false
+    attn: 
+      objective: OutputsError
+      strategy: Manual
+      granularity: Layer
+      degree: 2
+      element_batch_size: -1
+      sample_batch_size: -1
+      element_size: -1
+      sample_size: -1
+      pre_reshape: true
+      outputs_device: cpu
+      spans:
+      - - AbsMax
+        - AbsMax
+      alpha: 0.5
+      beta: 0
+      num_grids: 20

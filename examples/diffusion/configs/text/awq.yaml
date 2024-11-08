@@ -1,0 +1,55 @@
+# copied from projects/llm/configs/awq.yaml
+text:
+  calib:
+    num_samples: 128
+    seq_length: 512
+    min_seq_length: 0
+    max_seq_length: 512
+  wgts:
+    dtype: uint4
+    zero_point: PostScale
+    group_shapes:
+    - - 1
+      - 128
+    scale_dtypes:
+    - torch.float16
+    enable_calib_range: true
+    calib_range:
+      objective: ProductsError
+      strategy: GridSearch
+      granularity: Group
+      degree: 2
+      max_shrink: 0.8
+      max_expand: 1.0
+      num_grids: 20
+      skip_qkv_proj: true
+  ipts:
+    static: false
+    dtype: null
+    group_shapes:
+    - - 1
+      - -1
+    scale_dtypes:
+    - null
+  opts:
+    static: false
+    dtype: null
+    group_shapes:
+    - - 1
+      - -1
+    scale_dtypes:
+    - null
+  enable_smooth: true
+  smooth:
+    enable_proj: true
+    proj:
+      objective: OutputsError
+      strategy: GridSearch
+      granularity: Layer
+      spans:
+      - - AbsMax
+        - AbsMax
+      alpha: 0.5
+      beta: 0
+      num_grids: 20
+    enable_attn: false

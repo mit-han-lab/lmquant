@@ -1,0 +1,51 @@
+quant:
+  calib:
+    num_samples: 128
+    seq_length: 2048
+    min_seq_length: 2048
+    max_seq_length: 0
+  wgts:
+    dtype: uint4
+    zero_point: PostScale
+    group_shapes:
+    - - 1
+      - 128
+    scale_dtypes:
+    - torch.float16
+    enable_kernel_gptq: true
+    kernel_gptq:
+      damp_percentage: 0.01
+      block_size: 128
+      num_inv_tries: 250
+      hessian_block_size: 512
+    enable_calib_range: false
+    calib_range:
+      objective: TensorError
+      strategy: GridSearch
+      granularity: Group
+      degree: 2.4
+      element_batch_size: -1
+      sample_batch_size: -1
+      element_size: -1
+      sample_size: -1
+      pre_reshape: true
+      outputs_device: cpu
+      max_shrink: 0.2
+      max_expand: 1.0
+      num_grids: 100
+  ipts:
+    static: false
+    dtype: null
+    group_shapes:
+    - - 1
+      - -1
+    scale_dtypes:
+    - torch.float16
+  opts:
+    static: false
+    dtype: null
+    group_shapes:
+    - - 1
+      - -1
+    scale_dtypes:
+    - torch.float16
