@@ -1,6 +1,6 @@
 # SVDQuant: Absorbing Outliers by Low-Rank Components for 4-Bit Diffusion Models
 
-[[Website](https://hanlab.mit.edu/projects/svdquant)][[Paper](https://arxiv.org/abs/)][[Nunchaku Inference System](https://github.com/mit-han-lab/nunchaku)]
+[[Website](https://hanlab.mit.edu/projects/svdquant)][[Paper](http://arxiv.org/abs/2411.05007)][[Nunchaku Inference System](https://github.com/mit-han-lab/nunchaku)]
 
 Diffusion models have been proven highly effective at generating high-quality images. However, as these models grow larger, they require significantly more memory and suffer from higher latency, posing substantial challenges for deployment. In this work, we aim to accelerate diffusion models by quantizing their weights and activations to 4 bits. At such an aggressive level, both weights and activations are highly sensitive to quantization, where conventional post-training quantization methods for large language models like smoothing become insufficient. To overcome this limitation, we propose **SVDQuant**, a new 4-bit quantization paradigm. Different from smoothing which redistributes outliers between weights and activations, our approach *absorbs* these outliers using a low-rank branch. We first shift the outliers from activations into the weights, then employ a high-precision low-rank branch to take in the outliers in the weights with SVD. This process eases the quantization on both sides. However, naively running the low-rank branch independently incurs significant overhead due to extra data movement of activations, negating the quantization speedup. To address this, we co-design an inference engine **Nunchaku** that fuses the kernels in the low-rank branch into thosein the low-bit branch to cut off redundant memory access. It can also seamlessly support off-the-shelf low-rank adapters (LoRAs) without the requantization. Extensive experiments on SDXL, PixArt-Sigma, and FLUX.1 validate the effectiveness of SVDQuant in preserving image quality. We reduce the memory usage for the 12B FLUX.1 models by 3.6×, achieving 3.5× speedup over the 4-bit weight-only quantized baseline on a 16GB RTX-4090 GPU, paving the way for more interactive applications on PCs.
 
@@ -90,7 +90,7 @@ If you find `deepcompressor` useful or relevant to your research, please kindly 
 @article{li2024svdquant,
   title={SVDQuant: Absorbing Outliers by Low-Rank Components for 4-Bit Diffusion Models},
   author={Li*, Muyang, and Lin*, Yujun and Zhang, Zhekai and Cai, Tianle and Li, Xiuyu and Guo, Junxian and Xie, Enze and Meng, Chenlin and Zhu, Jun-Yan and Han, Song},
-  journal={arXiv preprint arXiv:2405.},
+  journal={arXiv preprint arXiv:2411.05007},
   year={2024}
 }
 ```
