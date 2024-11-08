@@ -11,9 +11,9 @@
     <!-- <a href="https://deepcompressor.mit.edu">
         <img alt="Website" src="https://img.shields.io/website?up_message=deepcompressor&url=https%3A%2F%2Fdeepcompressor.mit.edu">
     </a> -->
-   <a href="https://pypi.org/project/deepcompressor/">
+   <!-- <a href="https://pypi.org/project/deepcompressor/">
         <img alt="Pypi" src="https://img.shields.io/pypi/v/deepcompressor">
-    </a>
+    </a> -->
 </p>
 <br />
 
@@ -43,14 +43,6 @@ DeepCompressor also contains examples that integrate with other inference librar
   + [Deploy quantized diffusion models with Nunchaku](/examples/diffusion/)
 
 ## Installation
-
-### Install via Pip
-
-Commands to install via pip are
-
-```bash
-pip install deepcompressor
-```
 
 ### Install from Source
 
